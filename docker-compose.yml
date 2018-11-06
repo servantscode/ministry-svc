@@ -1,7 +1,7 @@
 version: '3'
 services:
-  hello-svc:
-    image: "servantscode/hello:latest"
+  ministry-svc:
+    image: "servantscode/ministry-svc:latest"
     ports:
      - "80:8080"
   postgres:
