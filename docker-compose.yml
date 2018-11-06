@@ -3,15 +3,9 @@ services:
   ministry-svc:
     image: "servantscode/ministry-svc:latest"
     ports:
-     - "80:8080"
-  postgres:
-    image: "postgres"
-    ports:
-     - "5432:5432"
-    volumes:
-     - postgres:/var/lib/postgresql/data
-    environment:
-      POSTGRES_PASSWORD: "SuperSecret"
+     - "81:8080"
+    external_links:
+      - person_svc:postgres
 
 volumes:
   postgres:
