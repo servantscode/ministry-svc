@@ -4,8 +4,6 @@ services:
     image: "servantscode/ministry-svc:latest"
     ports:
      - "81:8080"
-    external_links:
-      - person_svc:postgres
 
 volumes:
   postgres:
