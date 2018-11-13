@@ -5,9 +5,6 @@ services:
     ports:
      - "81:8080"
 
-volumes:
-  postgres:
-
 networks:
   default:
     external:
