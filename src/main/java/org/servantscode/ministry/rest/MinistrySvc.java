@@ -24,10 +24,9 @@ public class MinistrySvc {
             MinistryDB db = new MinistryDB();
             return db.getMinistryNames(nameSearch, count);
         } catch (Throwable t) {
-            logger.error("Retrieving ministries failed:");
-            t.printStackTrace();
+            logger.error("Retrieving ministries failed:", t);
+            throw new WebApplicationException("Retrieving ministries failed");
         }
-        return null;
     }
 
     @GET @Produces(MediaType.APPLICATION_JSON)
@@ -43,10 +42,9 @@ public class MinistrySvc {
             List<Ministry> results = db.getMinistries(nameSearch, sortField, start, count);
             return new MinistryQueryResponse(start, results.size(), totalMinistries, results);
         } catch (Throwable t) {
-            logger.error("Retrieving ministries failed:");
-            t.printStackTrace();
+            logger.error("Retrieving ministries failed:", t);
+            throw new WebApplicationException("Retrieving ministries failed");
         }
-        return null;
     }
 
     @GET @Path("/{id}") @Produces(MediaType.APPLICATION_JSON)
@@ -54,10 +52,9 @@ public class MinistrySvc {
         try {
             return new MinistryDB().getMinistry(id);
         } catch (Throwable t) {
-            logger.error("Retrieving ministry failed:");
-            t.printStackTrace();
+            logger.error("Retrieving ministry failed:", t);
+            throw new WebApplicationException("Retrieving ministry failed");
         }
-        return null;
     }
 
 
@@ -69,10 +66,9 @@ public class MinistrySvc {
             logger.info("Created ministry: " + ministry.getName());
             return ministry;
         } catch (Throwable t) {
-            logger.error("Creating ministry failed:");
-            t.printStackTrace();
+            logger.error("Creating ministry failed:", t);
+            throw new WebApplicationException("Creating ministry failed");
         }
-        return null;
     }
 
     @PUT
@@ -83,10 +79,9 @@ public class MinistrySvc {
             logger.info("Edited ministry: " + ministry.getName());
             return ministry;
         } catch (Throwable t) {
-            logger.error("Updating ministry failed:");
-            t.printStackTrace();
+            logger.error("Updating ministry failed:", t);
+            throw new WebApplicationException("Updating ministry failed");
         }
-        return null;
     }
 
     @DELETE @Path("/{id}")
@@ -99,8 +94,8 @@ public class MinistrySvc {
                 throw new NotFoundException();
             logger.info("Deleted ministry: " + ministry.getName());
         } catch (Throwable t) {
-            logger.error("Deleting ministry failed:");
-            t.printStackTrace();
+            logger.error("Deleting ministry failed:", t);
+            throw new WebApplicationException("Deleting ministry failed");
         }
     }
 }

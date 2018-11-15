@@ -73,10 +73,11 @@ public class MinistryDB extends DBAccess {
 
     public void create(Ministry ministry) {
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement("INSERT INTO ministries(name) values (?)", Statement.RETURN_GENERATED_KEYS)
+             PreparedStatement stmt = conn.prepareStatement("INSERT INTO ministries(name, description) values (?, ?)", Statement.RETURN_GENERATED_KEYS)
         ){
 
             stmt.setString(1, ministry.getName());
+            stmt.setString(2, ministry.getDescription());
 
             if(stmt.executeUpdate() == 0) {
                 throw new RuntimeException("Could not create ministry: " + ministry.getName());
@@ -93,11 +94,12 @@ public class MinistryDB extends DBAccess {
 
     public void update(Ministry ministry) {
         try ( Connection conn = getConnection();
-              PreparedStatement stmt = conn.prepareStatement("UPDATE ministries SET name=? WHERE id=?")
+              PreparedStatement stmt = conn.prepareStatement("UPDATE ministries SET name=?, description=? WHERE id=?")
         ){
 
             stmt.setString(1, ministry.getName());
-            stmt.setInt(2, ministry.getId());
+            stmt.setString(2, ministry.getDescription());
+            stmt.setInt(3, ministry.getId());
 
             if(stmt.executeUpdate() == 0)
                 throw new RuntimeException("Could not update ministry: " + ministry.getName());
@@ -126,6 +128,7 @@ public class MinistryDB extends DBAccess {
             List<Ministry> ministries = new ArrayList<>();
             while(rs.next()) {
                 Ministry ministry = new Ministry(rs.getInt("id"), rs.getString("name"));
+                ministry.setDescription(rs.getString("description"));
                 ministries.add(ministry);
             }
             return ministries;
