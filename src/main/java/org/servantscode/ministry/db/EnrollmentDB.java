@@ -84,7 +84,7 @@ public class EnrollmentDB extends DBAccess {
 
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            throw new RuntimeException("Could not create enrollment: Person(" + enrollment.getPersonId() + "), Ministry(" + enrollment.getMinistryId() + "): " + enrollment.getRole(), e);
+            throw new RuntimeException("Could not update role for enrollment: Person(" + enrollment.getPersonId() + "), Ministry(" + enrollment.getMinistryId() + "): " + enrollment.getRole(), e);
         }
     }
 
@@ -98,7 +98,7 @@ public class EnrollmentDB extends DBAccess {
 
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            throw new RuntimeException("Could not create enrollment: Person(" + enrollment.getPersonId() + "), Ministry(" + enrollment.getMinistryId() + "): " + enrollment.getRole(), e);
+            throw new RuntimeException("Could not delete enrollment: Person(" + enrollment.getPersonId() + "), Ministry(" + enrollment.getMinistryId() + "): " + enrollment.getRole(), e);
         }
     }
     // ----- Private -----
