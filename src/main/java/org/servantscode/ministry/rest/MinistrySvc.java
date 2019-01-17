@@ -2,6 +2,7 @@ package org.servantscode.ministry.rest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.servantscode.commons.rest.PaginatedResponse;
 import org.servantscode.ministry.Ministry;
 import org.servantscode.ministry.db.MinistryDB;
 
@@ -30,7 +31,7 @@ public class MinistrySvc {
     }
 
     @GET @Produces(MediaType.APPLICATION_JSON)
-    public MinistryQueryResponse getMinistries(@QueryParam("start") @DefaultValue("0") int start,
+    public PaginatedResponse<Ministry> getMinistries(@QueryParam("start") @DefaultValue("0") int start,
                                            @QueryParam("count") @DefaultValue("100") int count,
                                            @QueryParam("sort_field") @DefaultValue("id") String sortField,
                                            @QueryParam("partial_name") @DefaultValue("") String nameSearch) {
@@ -40,7 +41,7 @@ public class MinistrySvc {
             MinistryDB db = new MinistryDB();
             int totalMinistries = db.getCount(nameSearch);
             List<Ministry> results = db.getMinistries(nameSearch, sortField, start, count);
-            return new MinistryQueryResponse(start, results.size(), totalMinistries, results);
+            return new PaginatedResponse<>(start, results.size(), totalMinistries, results);
         } catch (Throwable t) {
             logger.error("Retrieving ministries failed:", t);
             throw new WebApplicationException("Retrieving ministries failed");
