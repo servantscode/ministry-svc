@@ -2,22 +2,21 @@ package org.servantscode.ministry.rest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.servantscode.ministry.Ministry;
+import org.servantscode.commons.rest.SCServiceBase;
 import org.servantscode.ministry.MinistryEnrollment;
 import org.servantscode.ministry.db.EnrollmentDB;
-import org.servantscode.ministry.db.MinistryDB;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.List;
 
 @Path("/enrollment")
-public class MinistryEnrollmentSvc {
+public class MinistryEnrollmentSvc extends SCServiceBase {
     private static final Logger logger = LogManager.getLogger(MinistryEnrollmentSvc.class);
 
     @GET @Path("/person/{personId}")@Produces(MediaType.APPLICATION_JSON)
     public List<MinistryEnrollment> getMinistryEnrollments(@PathParam("personId") @DefaultValue("0") int personId) {
-
+        verifyUserAccess("ministry.enrollment.list");
         try {
             logger.trace(String.format("Retrieving ministry enrollments. Person: %d", personId));
             EnrollmentDB db = new EnrollmentDB();
@@ -31,6 +30,7 @@ public class MinistryEnrollmentSvc {
     @GET @Path("/ministry/{ministryId}") @Produces(MediaType.APPLICATION_JSON)
     public List<MinistryEnrollment> getMinistryMembership(@PathParam("ministryId") @DefaultValue("0") int ministryId) {
 
+        verifyUserAccess("ministry.enrollment.list");
         try {
             logger.trace(String.format("Retrieving ministry enrollments. Ministry: %d", ministryId));
             EnrollmentDB db = new EnrollmentDB();
@@ -44,6 +44,7 @@ public class MinistryEnrollmentSvc {
     @POST
     @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.APPLICATION_JSON)
     public MinistryEnrollment createEnrollment(MinistryEnrollment enrollment) {
+        verifyUserAccess("ministry.enrollment.create");
         try {
             EnrollmentDB db = new EnrollmentDB();
             db.createEnrollment(enrollment);
@@ -58,6 +59,7 @@ public class MinistryEnrollmentSvc {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.APPLICATION_JSON)
     public MinistryEnrollment updateRole(MinistryEnrollment enrollment) {
+        verifyUserAccess("ministry.enrollment.update");
         try {
             EnrollmentDB db = new EnrollmentDB();
             if(db.updateRole(enrollment)) {
@@ -74,6 +76,7 @@ public class MinistryEnrollmentSvc {
 
     @DELETE @Consumes(MediaType.APPLICATION_JSON)
     public void deleteEnrollment(MinistryEnrollment enrollment) {
+        verifyUserAccess("ministry.enrollment.delete");
         if(enrollment.getPersonId() <= 0 || enrollment.getMinistryId() <= 0)
             throw new NotFoundException();
 

@@ -3,6 +3,7 @@ package org.servantscode.ministry.rest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.servantscode.commons.rest.PaginatedResponse;
+import org.servantscode.commons.rest.SCServiceBase;
 import org.servantscode.ministry.Ministry;
 import org.servantscode.ministry.db.MinistryDB;
 
@@ -11,7 +12,7 @@ import javax.ws.rs.core.MediaType;
 import java.util.List;
 
 @Path("/ministry")
-public class MinistrySvc {
+public class MinistrySvc extends SCServiceBase {
     private static final Logger logger = LogManager.getLogger(MinistrySvc.class);
 
     @GET @Path("/autocomplete") @Produces(MediaType.APPLICATION_JSON)
@@ -20,6 +21,7 @@ public class MinistrySvc {
                                        @QueryParam("sort_field") @DefaultValue("id") String sortField,
                                        @QueryParam("partial_name") @DefaultValue("") String nameSearch) {
 
+        verifyUserAccess("ministry.list");
         try {
             logger.trace(String.format("Retrieving ministry names (%s, %s, page: %d; %d)", nameSearch, sortField, start, count));
             MinistryDB db = new MinistryDB();
@@ -36,6 +38,7 @@ public class MinistrySvc {
                                            @QueryParam("sort_field") @DefaultValue("id") String sortField,
                                            @QueryParam("partial_name") @DefaultValue("") String nameSearch) {
 
+        verifyUserAccess("ministry.list");
         try {
             logger.trace(String.format("Retrieving ministries (%s, %s, page: %d; %d)", nameSearch, sortField, start, count));
             MinistryDB db = new MinistryDB();
@@ -50,6 +53,7 @@ public class MinistrySvc {
 
     @GET @Path("/{id}") @Produces(MediaType.APPLICATION_JSON)
     public Ministry getMinistry(@PathParam("id") int id) {
+        verifyUserAccess("ministry.read");
         try {
             return new MinistryDB().getMinistry(id);
         } catch (Throwable t) {
@@ -62,6 +66,7 @@ public class MinistrySvc {
     @POST
     @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.APPLICATION_JSON)
     public Ministry createMinistry(Ministry ministry) {
+        verifyUserAccess("ministry.create");
         try {
             new MinistryDB().create(ministry);
             logger.info("Created ministry: " + ministry.getName());
@@ -75,6 +80,7 @@ public class MinistrySvc {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.APPLICATION_JSON)
     public Ministry updateMinistry(Ministry ministry) {
+        verifyUserAccess("ministry.update");
         try {
             new MinistryDB().update(ministry);
             logger.info("Edited ministry: " + ministry.getName());
@@ -87,6 +93,7 @@ public class MinistrySvc {
 
     @DELETE @Path("/{id}")
     public void deleteMinistry(@PathParam("id") int id) {
+        verifyUserAccess("ministry.delete");
         if(id <= 0)
             throw new NotFoundException();
         try {
