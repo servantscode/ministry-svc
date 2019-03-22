@@ -98,7 +98,7 @@ public class MinistrySvc extends SCServiceBase {
             throw new NotFoundException();
         try {
             Ministry ministry = new MinistryDB().getMinistry(id);
-            if(ministry == null || new MinistryDB().delete(ministry))
+            if(ministry == null || !new MinistryDB().delete(ministry))
                 throw new NotFoundException();
             logger.info("Deleted ministry: " + ministry.getName());
         } catch (Throwable t) {
