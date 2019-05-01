@@ -1,9 +1,13 @@
 package org.servantscode.ministry.db;
 
-import org.servantscode.commons.AutoCompleteComparator;
 import org.servantscode.commons.db.DBAccess;
+import org.servantscode.commons.db.ReportStreamingOutput;
 import org.servantscode.ministry.Ministry;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.StreamingOutput;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,23 +43,22 @@ public class MinistryDB extends DBAccess {
         }
     }
 
-    public List<String> getMinistryNames(String search, int count) {
-        String sql = format("SELECT name FROM ministries%s", optionalWhereClause(search));
-        try ( Connection conn = getConnection();
-              PreparedStatement stmt = conn.prepareStatement(sql)
-        ) {
-            try ( ResultSet rs = stmt.executeQuery()){
-                List<String> names = new ArrayList<>();
+    public StreamingOutput getReportReader(String search, final List<String> fields) {
+        final String sql = format("SELECT * FROM ministries p%s", optionalWhereClause(search));
 
-                while(rs.next())
-                    names.add(rs.getString(1));
+        return new ReportStreamingOutput(fields) {
+            @Override
+            public void write(OutputStream output) throws IOException, WebApplicationException {
+                try ( Connection conn = getConnection();
+                      PreparedStatement stmt = conn.prepareStatement(sql);
+                      ResultSet rs = stmt.executeQuery()) {
 
-                names.sort(new AutoCompleteComparator(search));
-                return (count < names.size())? names.subList(0, count): names;
+                    writeCsv(output, rs);
+                } catch (SQLException | IOException e) {
+                    throw new RuntimeException("Could not retrieve ministries containing '" + search + "'", e);
+                }
             }
-        } catch (SQLException e) {
-            throw new RuntimeException("Could not get ministry names containing " + search, e);
-        }
+        };
     }
 
     public Ministry getMinistry(int id) {
