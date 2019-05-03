@@ -34,7 +34,7 @@ public class MinistryEnrollmentSvc extends SCServiceBase {
         try {
             logger.trace(String.format("Retrieving ministry enrollments. Ministry: %d", ministryId));
             EnrollmentDB db = new EnrollmentDB();
-            return db.getMinistryMembmership(ministryId);
+            return db.getMinistryMembership(ministryId);
         } catch (Throwable t) {
             logger.error("Enrollment retrieval failed:", t);
             throw new WebApplicationException("Enrollment retrieval failed");
@@ -45,6 +45,10 @@ public class MinistryEnrollmentSvc extends SCServiceBase {
     @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.APPLICATION_JSON)
     public MinistryEnrollment createEnrollment(MinistryEnrollment enrollment) {
         verifyUserAccess("ministry.enrollment.create");
+
+        if(enrollment.getRoleId() <= 0 || enrollment.getPersonId() <= 0 || enrollment.getMinistryId() <= 0)
+            throw new BadRequestException();
+
         try {
             EnrollmentDB db = new EnrollmentDB();
             db.createEnrollment(enrollment);
@@ -60,6 +64,10 @@ public class MinistryEnrollmentSvc extends SCServiceBase {
     @Consumes(MediaType.APPLICATION_JSON) @Produces(MediaType.APPLICATION_JSON)
     public MinistryEnrollment updateRole(MinistryEnrollment enrollment) {
         verifyUserAccess("ministry.enrollment.update");
+
+        if(enrollment.getRoleId() <= 0 || enrollment.getPersonId() <= 0 || enrollment.getMinistryId() <= 0)
+            throw new BadRequestException();
+
         try {
             EnrollmentDB db = new EnrollmentDB();
             if(db.updateRole(enrollment)) {

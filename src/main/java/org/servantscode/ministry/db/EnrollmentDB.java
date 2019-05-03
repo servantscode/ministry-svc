@@ -12,11 +12,12 @@ import java.util.List;
 
 public class EnrollmentDB extends DBAccess {
 
-    public List<MinistryEnrollment> getMinistryMembmership(int ministryId) {
+    public List<MinistryEnrollment> getMinistryMembership(int ministryId) {
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT e.*, p.name AS person_name, m.name AS ministry_name " +
-                                                                 "FROM ministry_enrollments e, people p, ministries m " +
-                                                                 "WHERE ministry_id=? AND p.id = person_id AND m.id = ministry_id");
+             PreparedStatement stmt = conn.prepareStatement("SELECT e.*, p.name AS person_name, m.name AS ministry_name, r.name AS role " +
+                                                                 "FROM people p, ministries m, ministry_enrollments e " +
+                                                                 "LEFT JOIN ministry_roles r ON role_id=r.id " +
+                                                                 "WHERE e.ministry_id=? AND p.id = person_id AND m.id = e.ministry_id");
         ){
 
             stmt.setInt(1, ministryId);
@@ -29,9 +30,10 @@ public class EnrollmentDB extends DBAccess {
 
     public List<MinistryEnrollment> getPersonEnrollment(int personId) {
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT e.*, p.name AS person_name, m.name AS ministry_name " +
-                                                                 "FROM ministry_enrollments e, people p, ministries m " +
-                                                                 "WHERE person_id=? AND p.id = person_id AND m.id = ministry_id");
+             PreparedStatement stmt = conn.prepareStatement("SELECT e.*, p.name AS person_name, m.name AS ministry_name, r.name AS role " +
+                                                                 "FROM people p, ministries m, ministry_enrollments e " +
+                                                                 "LEFT JOIN ministry_roles r ON role_id=r.id " +
+                                                                 "WHERE person_id=? AND p.id = person_id AND m.id = e.ministry_id");
         ){
 
             stmt.setInt(1, personId);
@@ -44,9 +46,10 @@ public class EnrollmentDB extends DBAccess {
 
     public MinistryEnrollment populateEnrollment(MinistryEnrollment enrollment) {
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT e.*, p.name AS person_name, m.name AS ministry_name " +
-                                                                 "FROM ministry_enrollments e, people p, ministries m " +
-                                                                 "WHERE person_id=? AND ministry_id=? AND p.id = person_id AND m.id = ministry_id");
+             PreparedStatement stmt = conn.prepareStatement("SELECT e.*, p.name AS person_name, m.name AS ministry_name, r.name AS role " +
+                                                                 "FROM people p, ministries m, ministry_enrollments e " +
+                                                                 "LEFT JOIN ministry_roles r on role_id=r.id " +
+                                                                 "WHERE person_id=? AND e.ministry_id=? AND p.id = person_id AND m.id = e.ministry_id");
         ){
 
             stmt.setInt(1, enrollment.getPersonId());
@@ -60,25 +63,25 @@ public class EnrollmentDB extends DBAccess {
 
     public boolean createEnrollment(MinistryEnrollment enrollment) {
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement("INSERT INTO ministry_enrollments(person_id, ministry_id, role) VALUES (?, ?, ?)");
+             PreparedStatement stmt = conn.prepareStatement("INSERT INTO ministry_enrollments(person_id, ministry_id, role_id) VALUES (?, ?, ?)");
         ){
 
             stmt.setInt(1, enrollment.getPersonId());
             stmt.setInt(2, enrollment.getMinistryId());
-            stmt.setString(3, enrollment.getRole());
+            stmt.setInt(3, enrollment.getRoleId());
 
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            throw new RuntimeException("Could not create enrollment: Person(" + enrollment.getPersonId() + "), Ministry(" + enrollment.getMinistryId() + "): " + enrollment.getRole(), e);
+            throw new RuntimeException("Could not create enrollment: Person(" + enrollment.getPersonId() + "), Ministry(" + enrollment.getMinistryId() + "): " + enrollment.getRoleId(), e);
         }
     }
 
     public boolean updateRole(MinistryEnrollment enrollment) {
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement("UPDATE ministry_enrollments SET role=? WHERE person_id =? AND ministry_id =?");
+             PreparedStatement stmt = conn.prepareStatement("UPDATE ministry_enrollments SET role_id=? WHERE person_id =? AND ministry_id =?");
         ){
 
-            stmt.setString(1, enrollment.getRole());
+            stmt.setInt(1, enrollment.getRoleId());
             stmt.setInt(2, enrollment.getPersonId());
             stmt.setInt(3, enrollment.getMinistryId());
 
@@ -107,6 +110,7 @@ public class EnrollmentDB extends DBAccess {
             List<MinistryEnrollment> ministries = new ArrayList<>();
             while(rs.next()) {
                 MinistryEnrollment enrollment = new MinistryEnrollment(rs.getInt("person_id"),rs.getInt("ministry_id"), rs.getString("role"));
+                enrollment.setRoleId(rs.getInt("role_id"));
                 enrollment.setPersonName(rs.getString("person_name"));
                 enrollment.setMinistryName(rs.getString("ministry_name"));
                 ministries.add(enrollment);
