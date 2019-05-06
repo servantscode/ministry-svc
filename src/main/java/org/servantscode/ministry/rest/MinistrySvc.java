@@ -19,6 +19,7 @@ public class MinistrySvc extends SCServiceBase {
 
 
     private static final List<String> EXPORTABLE_FIELDS = Arrays.asList("id", "name", "description");
+    public enum CONTACT_TYPE {CONTACTS, LEADERS, ALL};
 
     private final MinistryDB db;
 
@@ -41,6 +42,21 @@ public class MinistrySvc extends SCServiceBase {
         } catch (Throwable t) {
             LOG.error("Retrieving ministries failed:", t);
             throw new WebApplicationException("Retrieving ministries failed");
+        }
+    }
+
+    @GET @Path("/{id}/email/{contactType}") @Produces(MediaType.APPLICATION_JSON)
+    public List<String> getMinistryEmails(@PathParam("id") int ministryId,
+                                          @PathParam("contactType") CONTACT_TYPE contactType) {
+        verifyUserAccess("ministry.enrollment.list");
+        verifyUserAccess("email.send");
+
+        try {
+            LOG.trace(String.format("Retrieving ministry emails (%s)", contactType));
+            return db.getMinistryEmailList(ministryId, contactType);
+        } catch (Throwable t) {
+            LOG.error("Retrieving ministry email list failed:", t);
+            throw new WebApplicationException("Retrieving ministry emails failed");
         }
     }
 

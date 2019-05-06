@@ -3,6 +3,7 @@ package org.servantscode.ministry.db;
 import org.servantscode.commons.db.DBAccess;
 import org.servantscode.commons.db.ReportStreamingOutput;
 import org.servantscode.ministry.Ministry;
+import org.servantscode.ministry.rest.MinistrySvc;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.StreamingOutput;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import static java.lang.String.format;
@@ -71,6 +73,24 @@ public class MinistryDB extends DBAccess {
             return results.isEmpty()? null: results.get(0);
         } catch (SQLException e) {
             throw new RuntimeException("Could not get ministry by id: " + id, e);
+        }
+    }
+
+    public List<String> getMinistryEmailList(int ministryId, MinistrySvc.CONTACT_TYPE contactType) {
+        try ( Connection conn = getConnection();
+              PreparedStatement stmt = conn.prepareStatement("SELECT p.email " +
+                      "FROM people p, ministry_enrollments e, ministry_roles r " +
+                      "WHERE p.id = e.person_id AND e.ministry_id=? AND e.role_id=r.id" + optionalContactFilter(contactType))) {
+
+            stmt.setInt(1, ministryId);
+            List<String> emails = new LinkedList<>();
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next())
+                    emails.add(rs.getString("email"));
+            }
+            return emails;
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not get ministry email list by id: " + ministryId, e);
         }
     }
 
@@ -141,4 +161,18 @@ public class MinistryDB extends DBAccess {
     private String optionalWhereClause(String search) {
         return !isEmpty(search)? format(" WHERE name ILIKE '%%%s%%'", search.replace("'", "''")) : "";
     }
+
+    private String optionalContactFilter(MinistrySvc.CONTACT_TYPE contactType) {
+        switch (contactType) {
+            case CONTACTS:
+                return " AND r.contact=true";
+            case LEADERS:
+                return " AND r.leader=true";
+            case ALL:
+                return "";
+            default:
+                throw new IllegalArgumentException();
+        }
+    }
+
 }
