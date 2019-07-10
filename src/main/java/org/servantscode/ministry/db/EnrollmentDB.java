@@ -1,6 +1,8 @@
 package org.servantscode.ministry.db;
 
 import org.servantscode.commons.db.DBAccess;
+import org.servantscode.commons.search.QueryBuilder;
+import org.servantscode.commons.security.OrganizationContext;
 import org.servantscode.ministry.MinistryEnrollment;
 
 import java.sql.Connection;
@@ -12,15 +14,20 @@ import java.util.List;
 
 public class EnrollmentDB extends DBAccess {
 
-    public List<MinistryEnrollment> getMinistryMembership(int ministryId) {
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT e.*, p.name AS person_name, m.name AS ministry_name, r.name AS role " +
-                                                                 "FROM people p, ministries m, ministry_enrollments e " +
-                                                                 "LEFT JOIN ministry_roles r ON role_id=r.id " +
-                                                                 "WHERE e.ministry_id=? AND p.id = person_id AND m.id = e.ministry_id");
-        ){
+    private QueryBuilder baseQuery() {
+        return select("e.*", "p.name AS person_name", "m.name AS ministry_name", "r.name AS role")
+                .from("people p", "ministries m", "ministry_enrollments e")
+                .join("LEFT JOIN ministry_roles r ON role_id=r.id")
+                .where("p.org_id=?", OrganizationContext.orgId())
+                .where("m.org_id=?", OrganizationContext.orgId())
+                .where("r.org_id=?", OrganizationContext.orgId());
+    }
 
-            stmt.setInt(1, ministryId);
+    public List<MinistryEnrollment> getMinistryMembership(int ministryId) {
+        QueryBuilder query = baseQuery()
+                .where("e.ministry_id=?", ministryId).where("p.id = person_id").where("m.id = e.ministry_id");
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = query.prepareStatement(conn)){
 
             return processResults(stmt);
         } catch (SQLException e) {
@@ -29,14 +36,10 @@ public class EnrollmentDB extends DBAccess {
     }
 
     public List<MinistryEnrollment> getPersonEnrollment(int personId) {
+        QueryBuilder query = baseQuery()
+                .where("person_id=?", personId).where("p.id = person_id").where("m.id = e.ministry_id");
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT e.*, p.name AS person_name, m.name AS ministry_name, r.name AS role " +
-                                                                 "FROM people p, ministries m, ministry_enrollments e " +
-                                                                 "LEFT JOIN ministry_roles r ON role_id=r.id " +
-                                                                 "WHERE person_id=? AND p.id = person_id AND m.id = e.ministry_id");
-        ){
-
-            stmt.setInt(1, personId);
+             PreparedStatement stmt = query.prepareStatement(conn)){
 
             return processResults(stmt);
         } catch (SQLException e) {
@@ -45,15 +48,12 @@ public class EnrollmentDB extends DBAccess {
     }
 
     public MinistryEnrollment populateEnrollment(MinistryEnrollment enrollment) {
+        QueryBuilder query = baseQuery()
+                .where("person_id=?", enrollment.getPersonId())
+                .where("e.ministry_id=?", enrollment.getMinistryId())
+                .where("p.id = person_id").where("m.id = e.ministry_id");
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT e.*, p.name AS person_name, m.name AS ministry_name, r.name AS role " +
-                                                                 "FROM people p, ministries m, ministry_enrollments e " +
-                                                                 "LEFT JOIN ministry_roles r on role_id=r.id " +
-                                                                 "WHERE person_id=? AND e.ministry_id=? AND p.id = person_id AND m.id = e.ministry_id");
-        ){
-
-            stmt.setInt(1, enrollment.getPersonId());
-            stmt.setInt(2, enrollment.getMinistryId());
+             PreparedStatement stmt = query.prepareStatement(conn)){
 
             return processResults(stmt).get(0);
         } catch (SQLException e) {

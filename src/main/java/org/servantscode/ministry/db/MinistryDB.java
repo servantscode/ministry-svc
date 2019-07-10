@@ -2,6 +2,9 @@ package org.servantscode.ministry.db;
 
 import org.servantscode.commons.db.DBAccess;
 import org.servantscode.commons.db.ReportStreamingOutput;
+import org.servantscode.commons.search.QueryBuilder;
+import org.servantscode.commons.search.SearchParser;
+import org.servantscode.commons.security.OrganizationContext;
 import org.servantscode.ministry.Ministry;
 import org.servantscode.ministry.rest.MinistrySvc;
 
@@ -14,15 +17,22 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import static java.lang.String.format;
-import static org.servantscode.commons.StringUtils.isEmpty;
+import static org.servantscode.ministry.rest.MinistrySvc.CONTACT_TYPE.CONTACTS;
+import static org.servantscode.ministry.rest.MinistrySvc.CONTACT_TYPE.LEADERS;
 
 public class MinistryDB extends DBAccess {
 
+    private SearchParser<Ministry> searchParser;
+
+    public MinistryDB() {
+        searchParser = new SearchParser<>(Ministry.class, "name");
+    }
+
     public int getCount(String search) {
-        String sql = format("Select count(1) from ministries%s", optionalWhereClause(search));
+        QueryBuilder query = count().from("ministries").search(searchParser.parse(search)).inOrg();
+//        String sql = format("Select count(1) from ministries%s", optionalWhereClause(search));
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
+             PreparedStatement stmt = query.prepareStatement(conn);
              ResultSet rs = stmt.executeQuery() ){
 
             return rs.next()? rs.getInt(1): 0;
@@ -32,12 +42,12 @@ public class MinistryDB extends DBAccess {
     }
 
     public List<Ministry> getMinistries(String search, String sortField, int start, int count) {
-        String sql = format("SELECT * FROM ministries%s ORDER BY %s LIMIT ? OFFSET ?", optionalWhereClause(search), sortField);
+        QueryBuilder query = selectAll().from("ministries").search(searchParser.parse(search)).inOrg()
+                .sort(sortField).limit(count).offset(start);
+//        String sql = format("SELECT * FROM ministries%s ORDER BY %s LIMIT ? OFFSET ?", optionalWhereClause(search), sortField);
         try ( Connection conn = getConnection();
-              PreparedStatement stmt = conn.prepareStatement(sql)
+              PreparedStatement stmt = query.prepareStatement(conn);
         ) {
-            stmt.setInt(1, count);
-            stmt.setInt(2, start);
 
             return processMinistryResults(stmt);
         } catch (SQLException e) {
@@ -46,13 +56,14 @@ public class MinistryDB extends DBAccess {
     }
 
     public StreamingOutput getReportReader(String search, final List<String> fields) {
-        final String sql = format("SELECT * FROM ministries p%s", optionalWhereClause(search));
+        final QueryBuilder query = selectAll().from("ministries").search(searchParser.parse(search)).inOrg();
+//        final String sql = format("SELECT * FROM ministries p%s", optionalWhereClause(search));
 
         return new ReportStreamingOutput(fields) {
             @Override
             public void write(OutputStream output) throws IOException, WebApplicationException {
                 try ( Connection conn = getConnection();
-                      PreparedStatement stmt = conn.prepareStatement(sql);
+                      PreparedStatement stmt = query.prepareStatement(conn);
                       ResultSet rs = stmt.executeQuery()) {
 
                     writeCsv(output, rs);
@@ -64,11 +75,11 @@ public class MinistryDB extends DBAccess {
     }
 
     public Ministry getMinistry(int id) {
+        QueryBuilder query = selectAll().from("ministries").withId(id).inOrg();
         try ( Connection conn = getConnection();
-              PreparedStatement stmt = conn.prepareStatement("SELECT * FROM ministries WHERE id=?")
+              PreparedStatement stmt = query.prepareStatement(conn);
         ) {
 
-            stmt.setInt(1, id);
             List<Ministry> results = processMinistryResults(stmt);
             return results.isEmpty()? null: results.get(0);
         } catch (SQLException e) {
@@ -77,12 +88,17 @@ public class MinistryDB extends DBAccess {
     }
 
     public List<String> getMinistryEmailList(int ministryId, MinistrySvc.CONTACT_TYPE contactType) {
-        try ( Connection conn = getConnection();
-              PreparedStatement stmt = conn.prepareStatement("SELECT p.email " +
-                      "FROM people p, ministry_enrollments e, ministry_roles r " +
-                      "WHERE p.id = e.person_id AND e.ministry_id=? AND e.role_id=r.id" + optionalContactFilter(contactType))) {
+        QueryBuilder query = select("p.email").from("people p", "ministry_enrollments e", "ministry_roles r")
+                .where("p.id=e.person_id").where("e.ministry_id=?", ministryId).where("e.role_id=r.id");
 
-            stmt.setInt(1, ministryId);
+        if(contactType == CONTACTS)
+            query.where("r.contact=true");
+        if(contactType == LEADERS)
+            query.where("r.leader=true");
+
+        try ( Connection conn = getConnection();
+              PreparedStatement stmt = query.prepareStatement(conn)) {
+
             List<String> emails = new LinkedList<>();
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next())
@@ -96,11 +112,12 @@ public class MinistryDB extends DBAccess {
 
     public void create(Ministry ministry) {
         try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement("INSERT INTO ministries(name, description) values (?, ?)", Statement.RETURN_GENERATED_KEYS)
+             PreparedStatement stmt = conn.prepareStatement("INSERT INTO ministries(name, description, org_id) values (?, ?, ?)", Statement.RETURN_GENERATED_KEYS)
         ){
 
             stmt.setString(1, ministry.getName());
             stmt.setString(2, ministry.getDescription());
+            stmt.setInt(3, OrganizationContext.orgId());
 
             if(stmt.executeUpdate() == 0) {
                 throw new RuntimeException("Could not create ministry: " + ministry.getName());
@@ -117,12 +134,13 @@ public class MinistryDB extends DBAccess {
 
     public void update(Ministry ministry) {
         try ( Connection conn = getConnection();
-              PreparedStatement stmt = conn.prepareStatement("UPDATE ministries SET name=?, description=? WHERE id=?")
+              PreparedStatement stmt = conn.prepareStatement("UPDATE ministries SET name=?, description=? WHERE id=? AND org_id=?")
         ){
 
             stmt.setString(1, ministry.getName());
             stmt.setString(2, ministry.getDescription());
             stmt.setInt(3, ministry.getId());
+            stmt.setInt(4, OrganizationContext.orgId());
 
             if(stmt.executeUpdate() == 0)
                 throw new RuntimeException("Could not update ministry: " + ministry.getName());
@@ -134,10 +152,11 @@ public class MinistryDB extends DBAccess {
 
     public boolean delete(Ministry ministry) {
         try ( Connection conn = getConnection();
-              PreparedStatement stmt = conn.prepareStatement("DELETE FROM ministries WHERE id=?")
+              PreparedStatement stmt = conn.prepareStatement("DELETE FROM ministries WHERE id=? AND org_id=?")
         ){
 
             stmt.setInt(1, ministry.getId());
+            stmt.setInt(2, OrganizationContext.orgId());
 
             return stmt.executeUpdate() != 0;
         } catch (SQLException e) {
@@ -157,22 +176,4 @@ public class MinistryDB extends DBAccess {
             return ministries;
         }
     }
-
-    private String optionalWhereClause(String search) {
-        return !isEmpty(search)? format(" WHERE name ILIKE '%%%s%%'", search.replace("'", "''")) : "";
-    }
-
-    private String optionalContactFilter(MinistrySvc.CONTACT_TYPE contactType) {
-        switch (contactType) {
-            case CONTACTS:
-                return " AND r.contact=true";
-            case LEADERS:
-                return " AND r.leader=true";
-            case ALL:
-                return "";
-            default:
-                throw new IllegalArgumentException();
-        }
-    }
-
 }
