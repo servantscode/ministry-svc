@@ -22,7 +22,7 @@ public class RoleDB extends DBAccess {
     }
 
     public int getCount(int ministryId, String search) {
-        QueryBuilder query = count().from("ministry_roles").search(searchParser.parse(search)).inOrg();
+        QueryBuilder query = count().from("ministry_roles").where("ministry_id=?", ministryId).search(searchParser.parse(search)).inOrg();
 //        String sql = format("SELECT count(1) from ministry_roles WHERE ministry_id=?%s", optionalWhereClause(search));
         try ( Connection conn = getConnection();
               PreparedStatement stmt = query.prepareStatement(conn)){
