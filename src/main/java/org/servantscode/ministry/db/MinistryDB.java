@@ -1,5 +1,6 @@
 package org.servantscode.ministry.db;
 
+import org.servantscode.commons.Identity;
 import org.servantscode.commons.db.DBAccess;
 import org.servantscode.commons.db.ReportStreamingOutput;
 import org.servantscode.commons.search.QueryBuilder;
@@ -103,6 +104,24 @@ public class MinistryDB extends DBAccess {
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next())
                     emails.add(rs.getString("email"));
+            }
+            return emails;
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not get ministry email list by id: " + ministryId, e);
+        }
+    }
+
+    public List<Identity> getMinistryContactList(int ministryId) {
+        QueryBuilder query = select("p.id", "p.name").from("people p", "ministry_enrollments e", "ministry_roles r")
+                .where("p.id=e.person_id").where("e.role_id=r.id").where("r.contact=true").where("e.ministry_id=?", ministryId);
+
+        try ( Connection conn = getConnection();
+              PreparedStatement stmt = query.prepareStatement(conn)) {
+
+            List<Identity> emails = new LinkedList<>();
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next())
+                    emails.add(new Identity(rs.getString("name"), rs.getInt("id")));
             }
             return emails;
         } catch (SQLException e) {

@@ -2,6 +2,7 @@ package org.servantscode.ministry.rest;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.servantscode.commons.Identity;
 import org.servantscode.commons.rest.PaginatedResponse;
 import org.servantscode.commons.rest.SCServiceBase;
 import org.servantscode.ministry.Ministry;
@@ -46,8 +47,8 @@ public class MinistrySvc extends SCServiceBase {
     }
 
     @GET @Path("/{id}/email/{contactType}") @Produces(MediaType.APPLICATION_JSON)
-    public List<String> getMinistryEmails(@PathParam("id") int ministryId,
-                                          @PathParam("contactType") CONTACT_TYPE contactType) {
+    public List<String> getMinistryContacts(@PathParam("id") int ministryId,
+                                            @PathParam("contactType") CONTACT_TYPE contactType) {
         verifyUserAccess("ministry.enrollment.list");
         verifyUserAccess("email.send");
 
@@ -59,6 +60,20 @@ public class MinistrySvc extends SCServiceBase {
             throw new WebApplicationException("Retrieving ministry emails failed");
         }
     }
+
+    @GET @Path("/{id}/contacts") @Produces(MediaType.APPLICATION_JSON)
+    public List<Identity> getMinistryEmails(@PathParam("id") int ministryId) {
+        verifyUserAccess("ministry.enrollment.list");
+
+        try {
+            LOG.trace("Retrieving ministry contacts");
+            return db.getMinistryContactList(ministryId);
+        } catch (Throwable t) {
+            LOG.error("Retrieving ministry contact list failed:", t);
+            throw new WebApplicationException("Retrieving ministry contact list failed.");
+        }
+    }
+
 
     @GET @Path("/report") @Produces(MediaType.TEXT_PLAIN)
     public Response getReport(@QueryParam("search") @DefaultValue("") String nameSearch) {
