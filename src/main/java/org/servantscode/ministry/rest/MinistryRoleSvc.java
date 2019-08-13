@@ -27,7 +27,7 @@ public class MinistryRoleSvc extends SCServiceBase {
     public PaginatedResponse<MinistryRole> getRoles(@QueryParam("start") @DefaultValue("0") int start,
                                            @QueryParam("count") @DefaultValue("20") int count,
                                            @QueryParam("sort_field") @DefaultValue("id") String sortField,
-                                           @QueryParam("partial_name") @DefaultValue("") String nameSearch) {
+                                           @QueryParam("search") @DefaultValue("") String nameSearch) {
 
         verifyUserAccess("ministry.role.list");
         try {

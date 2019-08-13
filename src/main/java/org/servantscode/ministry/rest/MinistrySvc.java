@@ -32,7 +32,7 @@ public class MinistrySvc extends SCServiceBase {
     public PaginatedResponse<Ministry> getMinistries(@QueryParam("start") @DefaultValue("0") int start,
                                            @QueryParam("count") @DefaultValue("100") int count,
                                            @QueryParam("sort_field") @DefaultValue("id") String sortField,
-                                           @QueryParam("partial_name") @DefaultValue("") String nameSearch) {
+                                           @QueryParam("search") @DefaultValue("") String nameSearch) {
 
         verifyUserAccess("ministry.list");
         try {
