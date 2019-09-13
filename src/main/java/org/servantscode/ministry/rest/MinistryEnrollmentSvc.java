@@ -3,6 +3,7 @@ package org.servantscode.ministry.rest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.servantscode.commons.rest.SCServiceBase;
+import org.servantscode.ministry.Ministry;
 import org.servantscode.ministry.MinistryEnrollment;
 import org.servantscode.ministry.db.EnrollmentDB;
 
@@ -14,12 +15,16 @@ import java.util.List;
 public class MinistryEnrollmentSvc extends SCServiceBase {
     private static final Logger logger = LogManager.getLogger(MinistryEnrollmentSvc.class);
 
+    EnrollmentDB db;
+    public MinistryEnrollmentSvc() {
+        db = new EnrollmentDB();
+    }
+
     @GET @Path("/person/{personId}")@Produces(MediaType.APPLICATION_JSON)
     public List<MinistryEnrollment> getMinistryEnrollments(@PathParam("personId") @DefaultValue("0") int personId) {
         verifyUserAccess("ministry.enrollment.list");
         try {
             logger.trace(String.format("Retrieving ministry enrollments. Person: %d", personId));
-            EnrollmentDB db = new EnrollmentDB();
             return db.getPersonEnrollment(personId);
         } catch (Throwable t) {
             logger.error("Enrollment retrieval failed:", t);
@@ -33,7 +38,6 @@ public class MinistryEnrollmentSvc extends SCServiceBase {
         verifyUserAccess("ministry.enrollment.list");
         try {
             logger.trace(String.format("Retrieving ministry enrollments. Ministry: %d", ministryId));
-            EnrollmentDB db = new EnrollmentDB();
             return db.getMinistryMembership(ministryId);
         } catch (Throwable t) {
             logger.error("Enrollment retrieval failed:", t);
@@ -50,7 +54,6 @@ public class MinistryEnrollmentSvc extends SCServiceBase {
             throw new BadRequestException();
 
         try {
-            EnrollmentDB db = new EnrollmentDB();
             db.createEnrollment(enrollment);
             logger.info(String.format("Enrolled person %d in ministry %d with role %s", enrollment.getPersonId(), enrollment.getMinistryId(), enrollment.getRole()));
             return db.populateEnrollment(enrollment);
@@ -69,7 +72,6 @@ public class MinistryEnrollmentSvc extends SCServiceBase {
             throw new BadRequestException();
 
         try {
-            EnrollmentDB db = new EnrollmentDB();
             if(db.updateRole(enrollment)) {
                 logger.info(String.format("Updated person %d in ministry %d to role %s", enrollment.getPersonId(), enrollment.getMinistryId(), enrollment.getRole()));
                 return db.populateEnrollment(enrollment);
@@ -82,16 +84,17 @@ public class MinistryEnrollmentSvc extends SCServiceBase {
         }
     }
 
-    @DELETE @Consumes(MediaType.APPLICATION_JSON)
-    public void deleteEnrollment(MinistryEnrollment enrollment) {
+    @DELETE @Path("/ministry/{ministryId}/person/{personId}") @Consumes(MediaType.APPLICATION_JSON)
+    public void deleteEnrollment(@PathParam("ministryId") int ministryId,
+                                 @PathParam("personId") int personId) {
         verifyUserAccess("ministry.enrollment.delete");
-        if(enrollment.getPersonId() <= 0 || enrollment.getMinistryId() <= 0)
+        if(personId <= 0 || ministryId <= 0)
             throw new NotFoundException();
 
         try {
-            if(!new EnrollmentDB().deleteEnrollment(enrollment))
+            if(!db.deleteEnrollment(personId, ministryId))
                 throw new NotFoundException();
-            logger.info(String.format("Removed person %d from ministry %d", enrollment.getPersonId(), enrollment.getMinistryId()));
+            logger.info(String.format("Removed person %d from ministry %d", personId, ministryId));
         } catch (Throwable t) {
             logger.error("De-enrollment failed:", t);
             throw new WebApplicationException("De-enrollment failed");

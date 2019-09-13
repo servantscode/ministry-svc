@@ -48,7 +48,10 @@ public class MinistryRoleSvc extends SCServiceBase {
             MinistryRole role = db.getRole(id);
             if(role == null || role.getMinistryId() != ministryId)
                 throw new NotFoundException();
+
             return role;
+        } catch (NotFoundException t) {
+            throw t;
         } catch (Throwable t) {
             LOG.error("Retrieving ministry role failed:", t);
             throw new WebApplicationException("Retrieving ministry role failed");
@@ -114,6 +117,8 @@ public class MinistryRoleSvc extends SCServiceBase {
                 throw new NotFoundException();
 
             LOG.info("Deleted ministry role: " + role.getName());
+        } catch (NotFoundException t) {
+            throw t;
         } catch (Throwable t) {
             LOG.error("Deleting ministry role failed:", t);
             throw new WebApplicationException("Deleting ministry role failed");
