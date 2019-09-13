@@ -31,7 +31,7 @@ public class MinistrySvc extends SCServiceBase {
     @GET @Produces(MediaType.APPLICATION_JSON)
     public PaginatedResponse<Ministry> getMinistries(@QueryParam("start") @DefaultValue("0") int start,
                                            @QueryParam("count") @DefaultValue("100") int count,
-                                           @QueryParam("sort_field") @DefaultValue("id") String sortField,
+                                           @QueryParam("sort_field") @DefaultValue("name") String sortField,
                                            @QueryParam("search") @DefaultValue("") String nameSearch) {
 
         verifyUserAccess("ministry.list");
