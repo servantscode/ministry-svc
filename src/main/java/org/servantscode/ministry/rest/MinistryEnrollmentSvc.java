@@ -9,7 +9,10 @@ import org.servantscode.ministry.db.EnrollmentDB;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.List;
+
+import static java.util.Arrays.asList;
 
 @Path("/enrollment")
 public class MinistryEnrollmentSvc extends SCServiceBase {
@@ -60,6 +63,21 @@ public class MinistryEnrollmentSvc extends SCServiceBase {
         } catch (Throwable t) {
             logger.error("Enrollment failed:", t);
             throw new WebApplicationException("Enrollment failed");
+        }
+    }
+
+    @GET @Path("/report") @Produces(MediaType.TEXT_PLAIN)
+    public Response getRelationshipReport() {
+
+        verifyUserAccess("ministry.enrollment..list");
+
+        try {
+            logger.trace(String.format("Retrieving ministry enrollment report"));
+            List<String> EXPORTABLE_FIELDS = asList("person_id", "person_name", "ministry_id", "ministry_name", "role_id", "role");
+            return Response.ok(db.getReportReader(EXPORTABLE_FIELDS)).build();
+        } catch (Throwable t) {
+            logger.error("Retrieving people report failed:", t);
+            throw t;
         }
     }
 

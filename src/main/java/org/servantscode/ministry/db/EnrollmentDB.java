@@ -1,12 +1,19 @@
 package org.servantscode.ministry.db;
 
 import org.servantscode.commons.db.EasyDB;
+import org.servantscode.commons.db.ReportStreamingOutput;
 import org.servantscode.commons.search.InsertBuilder;
 import org.servantscode.commons.search.QueryBuilder;
 import org.servantscode.commons.search.UpdateBuilder;
 import org.servantscode.commons.security.OrganizationContext;
 import org.servantscode.ministry.MinistryEnrollment;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.StreamingOutput;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -33,6 +40,30 @@ public class EnrollmentDB extends EasyDB<MinistryEnrollment> {
     public List<MinistryEnrollment> getPersonEnrollment(int personId) {
         return get(baseQuery().where("person_id=?", personId).where("p.id = person_id").where("m.id = e.ministry_id"));
     }
+
+    public StreamingOutput getReportReader(final List<String> fields) {
+        final QueryBuilder query = select("e.*", "p.name AS person_name", "m.name AS ministry_name", "r.name AS role")
+                .from("ministry_enrollments e")
+                .leftJoin("ministries m ON m.id=e.ministry_id")
+                .leftJoin("people p ON p.id=e.person_id")
+                .leftJoin("ministry_roles r ON role_id=r.id")
+                .inOrg("p.org_id");
+
+        return new ReportStreamingOutput(fields) {
+            @Override
+            public void write(OutputStream output) throws WebApplicationException {
+                try (Connection conn = getConnection();
+                     PreparedStatement stmt = query.prepareStatement(conn);
+                     ResultSet rs = stmt.executeQuery()) {
+
+                    writeCsv(output, rs);
+                } catch (SQLException | IOException e) {
+                    throw new RuntimeException("Could not retrieve relationships", e);
+                }
+            }
+        };
+    }
+
 
     public MinistryEnrollment populateEnrollment(MinistryEnrollment enrollment) {
         return getOne(baseQuery().where("person_id=?", enrollment.getPersonId())
